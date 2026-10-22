@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Vault · pwgen</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script type="module" src="/static/js/vault.js"></script>
+</head>
+<body class="page page--app">
+
+  <header class="topbar">
+    <div class="island island--brand">
+      <span class="brand-mark">
+        <svg class="icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 20 3"/><path d="m16 7 3 3"/><path d="m18 5 2 2"/></svg>
+      </span>
+      <span class="brand-name">pwgen</span>
+      <span class="brand-user mono" id="whoami"></span>
+    </div>
+    <nav class="island island--nav" aria-label="Main">
+      <a class="nav-link" href="/generate">Generate</a>
+      <a class="nav-link" href="/vault" aria-current="page">Vault</a>
+    </nav>
+    <div class="island island--status">
+      <span class="status">
+        <span class="status-dot" id="status-dot" data-state="unknown" aria-hidden="true"></span>
+        <span class="status-text" id="status-text">Connecting…</span>
+      </span>
+      <button class="btn btn--quiet" id="sign-out" type="button">
+        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>
+        <span>Sign out</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Locked: pick your age key -->
+    <section class="card unlock" id="locked" aria-labelledby="unlock-title">
+      <span class="unlock-icon">
+        <svg class="icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </span>
+      <div class="card-head">
+        <h1 class="card-title card-title--large" id="unlock-title">Unlock your vault</h1>
+        <p class="card-lede">Choose your age key file. It’s read in this browser and never uploaded. The server only ever sees encrypted records.</p>
+      </div>
+
+      <div class="dropzone" id="dropzone">
+        <svg class="icon icon--large" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+        <p class="dropzone-text">Drop <code class="code">pwgen.txt</code> here, or</p>
+        <label class="btn btn--primary file-button">
+          <span>Choose key file</span>
+          <input class="visually-hidden" id="key-file" type="file" accept=".txt,.age,.key,text/plain">
+        </label>
+      </div>
+
+      <form class="form" id="passphrase-form" hidden>
+        <div class="field">
+          <label class="field-label" for="passphrase">Passphrase for <span class="mono" id="key-name"></span></label>
+          <input class="input" id="passphrase" type="password" autocomplete="off">
+        </div>
+        <button class="btn btn--primary btn--block" type="submit">Unlock</button>
+      </form>
+
+      <p class="progress fine-print" id="unlock-progress" aria-live="polite" hidden></p>
+      <div id="unlock-error" class="alert alert--error" role="alert" hidden><span class="alert-text"></span></div>
+
+      <p class="fine-print">Passphrase-protected keys (<code class="code">age -p</code>) work too. You’ll be asked for the passphrase once.</p>
+    </section>
+
+    <!-- Unlocked: your passwords -->
+    <div class="vault" id="unlocked" hidden>
+
+      <div class="page-head page-head--split">
+        <div>
+          <h1 class="page-title">Vault</h1>
+          <p class="page-lede" id="vault-summary"></p>
+        </div>
+        <div class="actions">
+          <button class="btn btn--ghost" id="toggle-all" type="button" aria-pressed="false">
+            <svg class="icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span id="toggle-all-text">Show all</span>
+          </button>
+          <button class="btn btn--ghost" id="refresh" type="button">
+            <svg class="icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+            <span>Refresh</span>
+          </button>
+          <button class="btn btn--ghost" id="lock" type="button">
+            <svg class="icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <span>Lock</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="vault-warning" class="alert alert--warn" hidden><span class="alert-text"></span></div>
+
+      <div class="toolbar">
+        <label class="search">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span class="visually-hidden">Search labels</span>
+          <input class="search-input mono" id="search" type="search" placeholder="Search labels" autocomplete="off" spellcheck="false">
+        </label>
+        <div class="chips" id="filters" role="group" aria-label="Filter by label"></div>
+      </div>
+
+      <section class="card table-card" aria-label="Passwords">
+        <div class="table-scroll">
+          <table class="vault-table">
+            <thead>
+              <tr>
+                <th scope="col">Label</th>
+                <th scope="col">Password</th>
+                <th scope="col">Created</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody id="vault-rows"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="vault-empty" hidden>No passwords match that search.</p>
+        <p class="table-foot">
+          <svg class="icon" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3z"/></svg>
+          <span>Decrypted with your key on this device. Locks itself after 5 minutes without activity.</span>
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <!-- One vault row. vault.js copies this for each password. -->
+  <template id="vault-row-template">
+    <tr class="vault-row">
+      <td><span class="chip chip--static mono row-label"></span></td>
+      <td>
+        <div class="pw-cell">
+          <span class="pw mono row-pw"></span>
+          <button class="btn btn--icon btn--bare reveal-btn" type="button" aria-pressed="false" aria-label="Show password">
+            <span class="icon-show">
+              <svg class="icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            </span>
+            <span class="icon-hide" hidden>
+              <svg class="icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18"/><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1"/><path d="M6.6 6.6C3.9 8.4 2 12 2 12s3.6 7 10 7c1.8 0 3.4-.5 4.8-1.3"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+            </span>
+          </button>
+        </div>
+      </td>
+      <td class="row-date mono"></td>
+      <td class="row-actions">
+        <button class="btn btn--ghost btn--small copy-btn" type="button">
+          <svg class="icon" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          <span class="copy-label">Copy</span>
+        </button>
+      </td>
+    </tr>
+  </template>
+
+</body>
+</html>
